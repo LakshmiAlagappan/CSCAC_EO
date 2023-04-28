@@ -338,8 +338,8 @@ build_test_pls_classification = function(Tr, Te, ncp, qu_label, cl_label){
   pred_y[pred_y<0] = 0
   pred_y[pred_y>100] = 100
   class_y = pred_y
-  class_y[pred_y==100] = "Pure"
-  class_y[pred_y!=100] = "Adulterated"
+  class_y[pred_y==100] = "Pass"
+  class_y[pred_y!=100] = "Fail"
   pls_res$class_res = class_y
   cm = table("GT"=Te[[cl_label]], "Pred"=class_y)
   return(list(pls_mod = pls_mod, pls_res = pls_res, cm = cm))
@@ -1130,7 +1130,13 @@ theme_Publication  =  function(base_size=16, base_family="serif") {
 }
 
 plot_save = function(p, name, bh = 3, bw = 4){
-  fname = paste0(plot_results_dir, "/", plot_counter,"_",name, ".png")
+  fname = paste0(plot_results_dir, "/", plot_counter,"_",name, ".tiff")
+  cowplot::save_plot(fname, p,  base_height = bh, base_width = bw)
+  assign("plot_counter", (plot_counter+1), envir = .GlobalEnv)
+}
+
+plot_save = function(p, name, bh = 3, bw = 4){
+  fname = paste0(plot_results_dir, "/", name, ".png")
   cowplot::save_plot(fname, p,  base_height = bh, base_width = bw)
   assign("plot_counter", (plot_counter+1), envir = .GlobalEnv)
 }
@@ -1206,13 +1212,13 @@ plot_scatter = function(df,quant=FALSE, pal = palette("default"),
     color_group = factor(df[, 3])
   }
   shape_group = factor(df[, 4])
-  
+  sh_chars = c(0, seq(1:25), 33,35,36,37,38,42,43,63,64)
   p = ggplot2::ggplot(df, ggplot2::aes(x = Comp1, y = Comp2)) +
     ggplot2::geom_point(ggplot2::aes(shape = shape_group, color = color_group),
                size = 2.5, alpha = 0.8, stroke = 1.5) +
     ggplot2::geom_hline(yintercept = 0, lty = 2) +
     ggplot2::geom_vline(xintercept = 0, lty = 2) +
-    ggplot2::scale_shape_manual(values = (seq(1, length(unique(shape_group)))))
+    ggplot2::scale_shape_manual(values = sh_chars[1:length(unique(shape_group))])
   if (quant) {
     #p1 = p + ggplot2::scale_color_gradient(low = "#0A823F", high = "#A9230E")
     p1 = p + ggplot2::scale_color_gradient(low = pal[1], high = pal[2])
@@ -1288,6 +1294,19 @@ plot_crossval = function(df, ll =  c("Type", "Test Batches", "Train Batches")){
     #ggplot2::scale_fill_gradient(low = "#EA4335", high = "#34A853")+
     ggplot2::labs(title=ll[[1]], x=ll[[2]], y = ll[[3]])+
     theme_Publication()+
+    ggplot2::theme(axis.line = ggplot2::element_blank())
+  return(p)
+}
+
+plot_summary = function(df, ll =  c("Type", "Standardization Models", 
+                                    "Classification Models")){
+  df$row = factor(rownames(df), levels = rownames(df))
+  melted_df = reshape2::melt(df, "row")
+  p = ggplot2::ggplot(data = melted_df, ggplot2::aes(x=row, y=variable)) +
+    ggplot2::geom_tile(fill = "white", color = "black", lwd = 1, linetype = 1) +
+    ggplot2::geom_text(ggplot2::aes(label = round(value, 2)), size = 6)+
+    ggplot2::labs(title=ll[[1]], x=ll[[2]], y = ll[[3]])+
+    theme_Publication(base_size = 20)+
     ggplot2::theme(axis.line = ggplot2::element_blank())
   return(p)
 }
